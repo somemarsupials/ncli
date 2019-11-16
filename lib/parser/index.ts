@@ -1,14 +1,22 @@
 import {
-  Arguments,
   ChildCommandDefinition,
   CommandDefinition,
-  CommandReceived,
-  Flags,
-  Parameters,
-  ParentCommandDefinition
+  CommandReceived
 } from "../interfaces";
 
 import { parseArgv } from "./argv";
+
+export const parseCommandDefinition = (
+  commandDefinition: CommandDefinition,
+  argv: string[],
+  path: string[] = []
+) => {
+  if ("subcommands" in commandDefinition) {
+    return matchSubCommand(commandDefinition.subcommands, argv, path);
+  } else {
+    return parseCommand(commandDefinition, argv, path);
+  }
+};
 
 const parseCommand = (
   commandDefinition: ChildCommandDefinition,
@@ -37,17 +45,5 @@ const matchSubCommand = (
     return parseCommandDefinition(match, argv, [...path, command]);
   } else {
     throw new Error("cannot match command");
-  }
-};
-
-export const parseCommandDefinition = (
-  commandDefinition: CommandDefinition,
-  argv: string[],
-  path: string[] = []
-) => {
-  if ("subcommands" in commandDefinition) {
-    return matchSubCommand(commandDefinition.subcommands, argv, path);
-  } else {
-    return parseCommand(commandDefinition, argv, path);
   }
 };

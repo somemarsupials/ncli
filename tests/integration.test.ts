@@ -1,7 +1,7 @@
 import * as test from "tape";
 
-import { CommandDefinition } from "../src/interfaces";
-import { parseCommandDefinition } from "../src/parser";
+import { CommandDefinition } from "../lib/interfaces";
+import { parseCommandDefinition } from "../lib/parser";
 
 const singleCommand: CommandDefinition = {
   flags: ["flag-a", "flag-b"],

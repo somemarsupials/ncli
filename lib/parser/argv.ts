@@ -1,14 +1,11 @@
 import {
   Arguments,
   ChildCommandDefinition,
-  CommandDefinition,
-  CommandReceived,
   Flags,
-  Parameters,
-  ParentCommandDefinition
+  Parameters
 } from "../interfaces";
 
-import { createBigrams, classifyArg, stripFlagDashes } from "./helpers";
+import { createBigrams, isFlag, stripFlagDashes } from "./helpers";
 
 interface ParsedArgs {
   args: Arguments;
@@ -22,13 +19,17 @@ interface InterimParsedArgs extends ParsedArgs {
 
 type ArgumentType = "argument" | "parameter" | "flag";
 
-const identifyNextArg = (
-  { parameters, flags }: ChildCommandDefinition,
-  arg: string
-): ArgumentType => {
-  const { isFlag, value } = classifyArg(arg);
+interface IdentifiedArg {
+  value: string;
+  type: ArgumentType;
+}
 
-  if (!isFlag) {
+const identifyArgType = (
+  { parameters, flags }: ChildCommandDefinition,
+  flag: boolean,
+  value: string
+): ArgumentType => {
+  if (!flag) {
     return "argument";
   }
 
@@ -41,6 +42,18 @@ const identifyNextArg = (
   }
 
   throw new Error("unrecognised flag");
+};
+
+const identifyArg = (
+  commandDefinition: ChildCommandDefinition,
+  arg: string
+): IdentifiedArg => {
+  const value = stripFlagDashes(arg);
+
+  return {
+    type: identifyArgType(commandDefinition, isFlag(arg), value),
+    value
+  };
 };
 
 const addParameter = (
@@ -79,11 +92,10 @@ export const parseArgv = (
   commandDefinition: ChildCommandDefinition,
   argv: string[]
 ): ParsedArgs => {
-  const { args, parameters, flags } = createBigrams(argv).reduce(
-    (interim, [key, value]) => {
-      const type = identifyNextArg(commandDefinition, key);
-      const strippedKey = stripFlagDashes(key);
-
+  const { args, parameters, flags } = createBigrams(
+    argv.map(arg => identifyArg(commandDefinition, arg))
+  ).reduce(
+    (interim, [{ type, value }, next]) => {
       if (interim.skip) {
         return {
           ...interim,
@@ -93,12 +105,12 @@ export const parseArgv = (
 
       switch (type) {
         case "parameter":
-          return addParameter(interim, strippedKey, value);
+          return addParameter(interim, value, next && next.value);
         case "flag":
-          return addFlag(interim, strippedKey);
+          return addFlag(interim, value);
         case "argument":
         default:
-          return addArgument(interim, key);
+          return addArgument(interim, value);
       }
     },
     {
